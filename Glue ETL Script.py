@@ -87,5 +87,50 @@ glueContext.write_dynamic_frame.from_options(
 # 3. Top 5 Most Active Customers: This query identifies your "power users" by finding the customers who have submitted the most reviews.
 # 4. Overall Rating Distribution: This query shows the count for each star rating (1-star, 2-star, etc.)
 
+# ---------- Query 2: Daily review counts ----------
+daily_counts = spark.sql("""
+    SELECT review_date, COUNT(*) AS review_count
+    FROM product_reviews
+    GROUP BY review_date
+    ORDER BY review_date
+""")
+daily_frame = DynamicFrame.fromDF(daily_counts.repartition(1), glueContext, "daily_df")
+glueContext.write_dynamic_frame.from_options(
+    frame=daily_frame,
+    connection_type="s3",
+    connection_options={"path": "s3://handsonfinalprocessed/Athena Results/daily_review_counts/"},
+    format="csv"
+)
+
+# ---------- Query 3: Top 5 most active customers ----------
+top_customers = spark.sql("""
+    SELECT customer_id, COUNT(*) AS total_reviews
+    FROM product_reviews
+    GROUP BY customer_id
+    ORDER BY total_reviews DESC
+    LIMIT 5
+""")
+top_frame = DynamicFrame.fromDF(top_customers.repartition(1), glueContext, "top_df")
+glueContext.write_dynamic_frame.from_options(
+    frame=top_frame,
+    connection_type="s3",
+    connection_options={"path": "s3://handsonfinalprocessed/Athena Results/top_5_customers/"},
+    format="csv"
+)
+
+# ---------- Query 4: Overall rating distribution ----------
+rating_dist = spark.sql("""
+    SELECT rating, COUNT(*) AS count
+    FROM product_reviews
+    GROUP BY rating
+    ORDER BY rating
+""")
+dist_frame = DynamicFrame.fromDF(rating_dist.repartition(1), glueContext, "dist_df")
+glueContext.write_dynamic_frame.from_options(
+    frame=dist_frame,
+    connection_type="s3",
+    connection_options={"path": "s3://handsonfinalprocessed/Athena Results/rating_distribution/"},
+    format="csv"
+)
 
 job.commit()
